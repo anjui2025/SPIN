@@ -1,0 +1,88 @@
+# 🎡 Probability Spinner
+
+一個簡潔美觀的 **機率轉盤 (Probability Spinner)**，用於隨機抽選或分配機率事件。  
+支援自訂選項、顏色、比例，並可將設定儲存到瀏覽器本機端。
+
+![screenshot](./screenshot.png)
+
+---
+
+## ✨ 功能特色
+
+- 🎨 **自訂選項**：可新增、刪除任意數量的選項。
+- ⚖️ **機率控制**：輸入百分比數值，或一鍵平均分配。
+- 🎨 **顏色挑選**：每個選項可自訂顏色，轉盤顯示對應區塊。
+- 📊 **自動正規化**：確保總和固定為 100%。
+- 💾 **儲存與載入設定**：使用 LocalStorage 保存設定。
+- 🎉 **互動效果**：抽選結果會顯示，並伴隨簡單的紙屑動畫。
+- ⌨️ **多種操作方式**：可按下 `Space` 鍵或直接點擊轉盤進行抽選。
+
+---
+
+## 🚀 安裝與使用
+
+1. 下載或 Clone 專案：
+   ```bash
+   git clone https://github.com/yourname/probability-spinner.git
+打開 index.html 即可使用（不需要伺服器支援，直接瀏覽器開啟）。
+
+🛠️ 專案結構
+bash
+複製
+編輯
+.
+├── index.html      # 主程式，含 HTML/CSS/JS
+├── screenshot.png  # 範例畫面截圖
+└── README.md       # 說明文件
+🔧 開發調整
+若要修改版面寬度，可在 CSS 中調整 .container 與 .grid 的 width 與 gap。
+
+若要更改顏色自動生成規則，可修改 autoPalette 陣列。
+
+📜 授權
+MIT License
+自由修改與使用，歡迎分享與二次創作。
+
+# 🎡 Probability Spinner
+
+A clean and interactive **probability spinner** for random selection or weighted choices.  
+Supports custom options, adjustable probabilities, colors, and local storage for saving settings.
+
+![screenshot](./screenshot.png)
+
+---
+
+## ✨ Features
+
+- 🎨 **Custom Options**: Add or remove as many choices as you like.  
+- ⚖️ **Probability Control**: Manually input percentages or auto-distribute evenly.  
+- 🎨 **Custom Colors**: Each option can have its own color on the wheel.  
+- 📊 **Auto Normalization**: Ensures the total probability always equals 100%.  
+- 💾 **Save & Load Settings**: Uses browser LocalStorage to store configurations.  
+- 🎉 **Interactive Effects**: Displays the chosen result with a small confetti animation.  
+- ⌨️ **Multiple Controls**: Spin using the `Space` key, button click, or clicking the wheel itself.  
+
+---
+
+## 🚀 Getting Started
+
+1. Clone or download this repository:
+   ```bash
+   git clone https://github.com/yourname/probability-spinner.git
+Open index.html directly in your browser (no server required).
+
+🛠️ Project Structure
+.
+├── index.html      # Main file (HTML + CSS + JS)
+├── screenshot.png  # Example screenshot
+└── README.md       # Documentation
+🔧 Customization
+Adjust layout width by editing .container and .grid in CSS.
+
+Modify default colors by updating the autoPalette array inside the script.
+
+You can tweak animation duration or easing in the doSpin() function.
+
+📜 License
+MIT License
+Free to use, modify, and distribute. Contributions are welcome!
