@@ -415,7 +415,14 @@ button.danger{background:linear-gradient(180deg,#ff6b6b,#ff4d4d)}
   document.getElementById('spin').addEventListener('click', doSpin);
   svg.addEventListener('click', doSpin);
   window.addEventListener('keydown', function(e){
-    if (e.code === 'Space'){ e.preventDefault(); doSpin(); }
+    // 如果焦點在 input 或 textarea，不觸發
+    if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') {
+      return;
+    }
+    if (e.code === 'Space'){ 
+      e.preventDefault(); 
+      doSpin(); 
+    }
   });
 })();
 </script>
