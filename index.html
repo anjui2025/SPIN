@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>SPIN 轉盤</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0b0b0f; --panel:#14141a; --muted:#8a8fa3; --accent:#7c5cff;
+  --ok:#2ecc71; --bad:#ff5b5b; --ring:#1e1e28; --white:#fff;
+}
+body{
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", "Helvetica Neue", Arial;
+  background: radial-gradient(1000px 600px at 50% -10%, #20202a, var(--bg));
+  color: var(--white);
+  display:flex;align-items:center;justify-content:center;min-height:100vh;padding:24px;
+}
+.container{width:min(920px,100%); background:linear-gradient(180deg,#121218,#0c0c12);
+  border:1px solid #232334; border-radius:16px; box-shadow:0 20px 60px rgba(0,0,0,.5);
+  padding:20px 20px 28px;}
+.header{display:flex;gap:12px;align-items:center;justify-content:flex-end;margin-bottom:12px;flex-wrap:wrap;}
+.header-buttons{display:flex;gap:8px;flex-wrap:wrap}
+button{padding:10px 14px;border:none;border-radius:10px;background:#23233a;color:#e3e6ff;cursor:pointer;
+  transition:transform .06s ease, background .2s ease, opacity .2s ease;}
+button:hover{transform:translateY(-1px); background:#2b2b46}
+button:active{transform:translateY(0)}
+button.primary{background:linear-gradient(180deg,#8a73ff,#6e55ff)}
+button.danger{background:linear-gradient(180deg,#ff6b6b,#ff4d4d)}
+.small{padding:8px 10px;font-size:.9rem}
+.grid{display:grid; grid-template-columns: 360px 1fr; gap:24px; align-items:start;}
+@media (max-width:900px){.grid{grid-template-columns:1fr}}
+.spinner-wrap{position:relative; width:340px; height:340px; margin-inline:auto; display:grid; place-items:center;}
+.spin-shadow{position:absolute; inset:0; filter:drop-shadow(0 8px 24px rgba(0,0,0,.6));}
+.spinner-frame{position:absolute; inset:0; border-radius:999px; border:10px solid var(--ring);
+  box-shadow: inset 0 0 0 2px #2a2a3a, 0 0 0 8px #0a0a0e;}
+.spinner{width:300px; height:300px; transition: transform 3.2s cubic-bezier(.12,.73,.06,1.02); will-change: transform;}
+.spinner-arrow{position:absolute; top:-12px; left:50%; transform:translateX(-50%);
+  width:0;height:0;border-left:18px solid transparent;border-right:18px solid transparent;border-top:34px solid #ff5858;
+  filter:drop-shadow(0 4px 10px rgba(0,0,0,.6));}
+.title-below{margin-top:18px; display:flex; flex-direction:column; align-items:center; gap:6px;}
+#custom-title{width:280px; max-width:80%; padding:10px 12px; border-radius:10px; border:1px solid #2a2a3a;
+  background:#0f0f15; color:#eaeaf6; outline:none; text-align:center;}
+.hint{color:var(--muted); font-size:.9rem}
+.kbd{padding:.1em .45em;border:1px solid #444; border-bottom-width:3px;border-radius:6px; background:#0b0b12}
+.list{background:#12121a; border:1px solid #23233a; border-radius:12px; padding:12px; max-height:380px; overflow:auto;}
+.row{display:grid; grid-template-columns: 1fr 120px 36px; gap:10px; align-items:center; padding:6px; border-radius:10px;}
+.row + .row{margin-top:6px}
+.row input[type="text"], .row input[type="number"]{width:100%; padding:10px 10px; border-radius:10px;
+  border:1px solid #2a2a3a; background:#0f0f15; color:#eaeaf6; outline:none;}
+.row input[type="color"]{width:36px; height:36px; border:none; background:transparent; cursor:pointer;}
+.row .cell{ display:flex; align-items:center; gap:8px; }
+.tools{ display:flex; gap:8px; margin:10px 0 0; flex-wrap:wrap }
+.total{margin-top:12px; font-weight:600; color:#cfd2ff; display:flex; align-items:center; gap:10px;}
+.progress{flex:1; height:10px; background:#1a1a25; border-radius:999px; overflow:hidden; border:1px solid #2b2b3f;}
+.progress > span{display:block; height:100%; width:0%; background:linear-gradient(90deg,#6a9fff,#7b60ff); transition:width .25s ease;}
+.error{color:var(--bad); margin-top:6px; min-height:1.2em}
+.result{text-align:center; font-size:1.2rem; font-weight:700; margin:6px 0 2px;}
+/* ===== layout fix ===== */
+
+/* 讓整個面板更寬且置中，避免右側選項被擠出去 */
+.container{
+  width: clamp(940px, 92vw, 1200px);
+  margin-inline: auto;
+}
+
+/* 左右欄位比例＆間距微調，並允許右欄收縮避免溢出 */
+.grid{
+  grid-template-columns: minmax(340px, 380px) 1fr;
+  gap: 28px;
+  align-items: start;
+}
+.grid > :nth-child(2){ min-width: 0; }  /* 允許右欄內容縮小 */
+
+/* 列表輸入列在窄寬時不撐破容器 */
+.row{ grid-template-columns: 1fr 120px 36px; }
+.row input[type="text"]{ min-width: 0; }  /* 文字欄可縮 */
+.list{ max-width: 100%; overflow: auto; }
+
+/* 轉盤置中對齊 & 避免 SVG baseline 造成的垂直偏移 */
+.spinner-wrap{
+  width: 360px;
+  height: 360px;
+  margin-inline: auto;
+  display: grid;
+  place-items: center;     /* 嚴格置中 */
+}
+.spin-shadow{
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;     /* 內部元素也置中，避免位移 */
+}
+.spinner{ 
+  display: block;          /* 移除 inline SVG 的 baseline 影響 */
+  width: 300px; 
+  height: 300px; 
+  margin: 0 auto; 
+}
+
+/* 桌面更窄或筆電螢幕時改為單欄，避免整體歪掉 */
+@media (max-width: 1100px){
+  .grid{ grid-template-columns: 1fr; }
+  .spinner-wrap{ margin-bottom: 12px; }
+}
+</style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="header-buttons">
+        <button id="btn-equal" class="small">平均分配</button>
+        <button id="btn-normalize" class="small">正規化到 100%</button>
+        <button id="btn-add" class="small">新增選項</button>
+        <button id="btn-clear" class="small danger">清空</button>
+        <button id="spin" class="primary">Spin !!!</button>
+      </div>
+    </div>
+
+    <div class="grid">
+      <div>
+        <div class="spinner-wrap">
+          <div class="spin-shadow">
+            <div class="spinner-frame"></div>
+            <div class="spinner-arrow" aria-hidden="true"></div>
+            <svg class="spinner" viewBox="0 0 100 100" role="img" aria-label="轉盤"></svg>
+          </div>
+        </div>
+        <div class="title-below">
+          <input type="text" id="custom-title" placeholder="輸入標題..." value="轉盤">
+          <div class="hint">按 <span class="kbd">Space</span> 或點轉盤來啟動</div>
+        </div>
+      </div>
+
+      <div>
+        <div class="list" id="options-list" aria-live="polite"></div>
+        <div class="tools">
+          <button id="btn-save" class="small">儲存設定</button>
+          <button id="btn-load" class="small">載入設定</button>
+          <button id="btn-demo" class="small">載入範例</button>
+        </div>
+        <div class="total">
+          總和：<span id="total-text">0%</span>
+          <div class="progress"><span id="progress-bar"></span></div>
+        </div>
+        <div id="error" class="error"></div>
+        <div id="result" class="result"></div>
+      </div>
+    </div>
+  </div>
+
+<script>
+(function(){
+  var svg = document.querySelector('.spinner');
+  var resultEl = document.getElementById('result');
+  var errorEl  = document.getElementById('error');
+  var totalText = document.getElementById('total-text');
+  var progressBar = document.getElementById('progress-bar');
+  var titleInput = document.getElementById('custom-title');
+  var list = document.getElementById('options-list');
+
+  var currentRotation = 0;
+  var options = [];
+
+  var autoPalette = [
+    '#7C5CFF','#5CE1E6','#45B7D1','#96CEB4','#FFEEAD','#D4A5A5','#9B59B6','#3498DB',
+    '#FF6B6B','#F7B267','#70C1B3','#B2DBBF','#C19BF5','#7FDBDA','#88D498','#F2A65A'
+  ];
+
+  function clamp(n, min, max){ return Math.max(min, Math.min(max, n)); }
+  function sum(arr){ for(var s=0,i=0;i<arr.length;i++) s+=arr[i]; return s; }
+
+  function safeNormalize(probs){
+    var p = probs.map(function(v){ return clamp(isFinite(v)?v:0, 0, 100); });
+    var s = sum(p);
+    if (s <= 0){
+      var avg = 100 / p.length;
+      p = p.map(function(){ return avg; });
+    } else {
+      p = p.map(function(v){ return v * 100 / s; });
+    }
+    var diff = 100 - sum(p);
+    if (Math.abs(diff) > 0.0001){
+      var maxVal = Math.max.apply(null, p);
+      var idx = p.indexOf(maxVal);
+      p[idx] += diff;
+    }
+    return p.map(function(v){ return +v.toFixed(1); });
+  }
+
+  function readRows(){
+    var rows = Array.prototype.slice.call(list.querySelectorAll('.row'));
+    var names = [], probs = [], colors = [];
+    rows.forEach(function(row, i){
+      var name = row.querySelector('.name').value.trim() || ('Option ' + (i+1));
+      var prob = parseFloat(row.querySelector('.prob').value);
+      var color = row.querySelector('.color').value || autoPalette[i % autoPalette.length];
+      names.push(name); probs.push(isFinite(prob)?prob:0); colors.push(color);
+    });
+    var norm = safeNormalize(probs);
+    options = names.map(function(name, i){ return { name:name, probability:norm[i], color:colors[i] }; });
+    rows.forEach(function(row,i){ row.querySelector('.prob').value = options[i].probability; });
+    var t = +(sum(options.map(function(o){return o.probability;})).toFixed(1));
+    totalText.textContent = t + '%';
+    progressBar.style.width = Math.min(100,t) + '%';
+    errorEl.textContent = t !== 100 ? '（已自動正規化到 100%）' : '';
+  }
+
+  function draw(){
+    svg.innerHTML = '';
+    if (!options.length) return;
+    var startAngle = -90;
+    options.forEach(function(opt, i){
+      var angle = opt.probability * 3.6;
+      var endAngle = startAngle + angle;
+      var largeArc = angle > 180 ? 1 : 0;
+
+      var r = 50, cx=50, cy=50;
+      var sr = (Math.PI/180)*startAngle, er = (Math.PI/180)*endAngle;
+      var x1 = cx + r * Math.cos(sr), y1 = cy + r * Math.sin(sr);
+      var x2 = cx + r * Math.cos(er), y2 = cy + r * Math.sin(er);
+
+      var path = document.createElementNS('http://www.w3.org/2000/svg','path');
+      path.setAttribute('d', 'M '+cx+' '+cy+' L '+x1+' '+y1+' A '+r+' '+r+' 0 '+largeArc+' 1 '+x2+' '+y2+' Z');
+      path.setAttribute('fill', opt.color || autoPalette[i%autoPalette.length]);
+      svg.appendChild(path);
+
+      var mid = (startAngle + endAngle) / 2;
+      var tr = (Math.PI/180)*mid;
+      var tx = cx + (r*0.62) * Math.cos(tr);
+      var ty = cy + (r*0.62) * Math.sin(tr);
+      var label = document.createElementNS('http://www.w3.org/2000/svg','text');
+      label.setAttribute('x', tx);
+      label.setAttribute('y', ty);
+      label.setAttribute('text-anchor','middle');
+      label.setAttribute('dominant-baseline','middle');
+      label.setAttribute('fill', '#fff');
+      label.setAttribute('font-size', '4');
+      label.textContent = opt.name + ' (' + opt.probability.toFixed(1) + '%)';
+      svg.appendChild(label);
+
+      startAngle = endAngle;
+    });
+  }
+
+  function showResult(name){ resultEl.textContent = 'Result: ' + name; }
+
+  function confettiTiny(){
+    var n = 12;
+    var box = document.body;
+    for(var i=0;i<n;i++){
+      var piece = document.createElement('div');
+      var size = 6 + Math.random()*6;
+      piece.style.position='fixed';
+      piece.style.left = (50 + (Math.random()*30-15)) + 'vw';
+      piece.style.top = '-20px';
+      piece.style.width=size+'px';
+      piece.style.height=size+'px';
+      piece.style.background = autoPalette[i%autoPalette.length];
+      piece.style.opacity='0.9';
+      piece.style.transform='rotate('+(Math.random()*360)+'deg)';
+      piece.style.borderRadius='2px';
+      piece.style.pointerEvents='none';
+      piece.style.zIndex='9999';
+      box.appendChild(piece);
+      var duration = 1200 + Math.random()*800;
+      piece.animate([
+        { transform: piece.style.transform, top: '-20px', opacity:1 },
+        { transform: 'rotate('+(Math.random()*720)+'deg)', top: '110vh', opacity: .9 }
+      ], { duration: duration, easing:'cubic-bezier(.17,.67,.12,.99)' }).onfinish = function(){ piece.remove(); };
+    }
+  }
+
+  function addRow(data){
+    var row = document.createElement('div');
+    row.className='row';
+    var nameVal = (data && data.name) ? data.name : '';
+    var colorVal = (data && data.color) ? data.color : '';
+    var probVal = (data && data.probability != null) ? data.probability : '';
+    row.innerHTML =
+      '<div class="cell">' +
+        '<input class="name" type="text" placeholder="Option name" value="'+ nameVal +'">' +
+        '<input class="color" type="color" value="'+ colorVal +'" title="顏色"/>' +
+      '</div>' +
+      '<input class="prob" type="number" min="0" max="100" step="0.1" placeholder="%" value="'+ probVal +'">' +
+      '<button class="small danger del" title="刪除">×</button>';
+
+    row.querySelector('.name').addEventListener('input', onChange);
+    row.querySelector('.prob').addEventListener('input', onChange);
+    row.querySelector('.color').addEventListener('input', onChange);
+    row.querySelector('.del').addEventListener('click', function(){
+      row.remove();
+      rebalanceIfEmpty();
+      onChange();
+    });
+    list.appendChild(row);
+  }
+
+  function rebalanceIfEmpty(){
+    if (!list.querySelectorAll('.row').length){
+      addRow({name:'Option 1', probability:100, color:autoPalette[0]});
+    }
+  }
+
+  function equalize(){
+    var rows = Array.prototype.slice.call(list.querySelectorAll('.row'));
+    var equal = +(100 / rows.length).toFixed(1);
+    rows.forEach(function(row,i){
+      row.querySelector('.prob').value = equal;
+      var nameInput = row.querySelector('.name');
+      if (!nameInput.value.trim()){ nameInput.value = 'Option ' + (i+1); }
+      var colorInput = row.querySelector('.color');
+      if (!colorInput.value){ colorInput.value = autoPalette[i%autoPalette.length]; }
+    });
+    onChange();
+  }
+
+  function normalize(){
+    var rows = Array.prototype.slice.call(list.querySelectorAll('.row'));
+    var probs = rows.map(function(r){ return parseFloat(r.querySelector('.prob').value); });
+    var norm = safeNormalize(probs);
+    rows.forEach(function(r,i){ r.querySelector('.prob').value = norm[i]; });
+    onChange();
+  }
+
+  function clearAll(){
+    list.innerHTML='';
+    addRow({name:'Option 1', probability:100, color:autoPalette[0]});
+    onChange();
+    resultEl.textContent = '';
+  }
+
+  function save(){
+    readRows();
+    var data = { title: titleInput.value, options: options };
+    localStorage.setItem('spinner-config', JSON.stringify(data));
+    errorEl.textContent = '已儲存到本機';
+    setTimeout(function(){ errorEl.textContent=''; }, 1200);
+  }
+
+  function load(){
+    var raw = localStorage.getItem('spinner-config');
+    if (!raw){
+      errorEl.textContent='尚未儲存過設定';
+      setTimeout(function(){ errorEl.textContent=''; }, 1200);
+      return;
+    }
+    var data = JSON.parse(raw);
+    titleInput.value = (data && data.title) ? data.title : '轉盤';
+    list.innerHTML='';
+    var arr = (data && data.options) ? data.options : [];
+    arr.forEach(function(it){ addRow(it); });
+    rebalanceIfEmpty();
+    onChange();
+  }
+
+  function loadDemo(){
+    var demo = [
+      {name:'A', probability:40, color:'#7C5CFF'},
+      {name:'B', probability:25, color:'#5CE1E6'},
+      {name:'C', probability:20, color:'#F7B267'},
+      {name:'D', probability:15, color:'#FF6B6B'}
+    ];
+    list.innerHTML='';
+    demo.forEach(function(it){ addRow(it); });
+    onChange();
+  }
+
+  function onChange(){ readRows(); draw(); }
+
+  // 初始兩列
+  addRow({name:'Option 1', probability:50, color:autoPalette[0]});
+  addRow({name:'Option 2', probability:50, color:autoPalette[1]});
+  onChange();
+
+  // 綁事件（放在 DOM 都在之後）
+  document.getElementById('btn-add').addEventListener('click', function(){
+    addRow({name:'Option ' + (list.querySelectorAll('.row').length+1),
+            probability: (100/(list.querySelectorAll('.row').length+1)).toFixed(1)});
+    equalize();
+  });
+  document.getElementById('btn-equal').addEventListener('click', equalize);
+  document.getElementById('btn-normalize').addEventListener('click', normalize);
+  document.getElementById('btn-clear').addEventListener('click', clearAll);
+  document.getElementById('btn-save').addEventListener('click', save);
+  document.getElementById('btn-load').addEventListener('click', load);
+  document.getElementById('btn-demo').addEventListener('click', loadDemo);
+
+  function doSpin(){
+    if (!options.length) return;
+    var extra = 5 + Math.floor(Math.random()*3);
+    var randomAngle = Math.random()*360;
+    var totalRotation = 360*extra + randomAngle;
+    currentRotation += totalRotation;
+    svg.style.transform = 'rotate('+currentRotation+'deg)';
+
+    setTimeout(function(){
+      var normalized = ((currentRotation % 360) + 360) % 360;
+      var hit = (360 - normalized + 270) % 360;
+      var acc = 0;
+      for (var i=0;i<options.length;i++){
+        var sweep = options[i].probability * 3.6;
+        if (hit >= acc && hit < acc + sweep){
+          showResult(options[i].name);
+          confettiTiny();
+          return;
+        }
+        acc += sweep;
+      }
+      showResult(options[options.length-1].name);
+      confettiTiny();
+    }, 3200);
+  }
+
+  document.getElementById('spin').addEventListener('click', doSpin);
+  svg.addEventListener('click', doSpin);
+  window.addEventListener('keydown', function(e){
+    if (e.code === 'Space'){ e.preventDefault(); doSpin(); }
+  });
+})();
+</script>
+</body>
+</html>
